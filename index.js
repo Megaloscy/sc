@@ -1,516 +1,462 @@
-import { GameEngine } from '/sc/main.js';
-import { AddonLoader } from '/sc/addons/addon-loader.js';
+import { GameEngine } from './main.js';
+import AddonRegistry from './addon-registry.js';
 
-class StarCraftLikeRTS {
-    constructor() {
-        this.gameEngine = new GameEngine();
-        
-        console.log('📍 Current location:', window.location.href);
-        console.log('📂 Script path:', import.meta.url);
-        
-        // IMPORTANT: Use absolute path for XAMPP
-       // this.addonLoader = new AddonLoader(this.gameEngine, '/sc/addons/');
-        
-      //  this.players = new Map();
-      //  this.gameState = 'lobby';
-       // this.currentPlayerId = null;
-      //  this.lastFrameTime = 0;
-        this.isInitialized = false;
-		
+// Import addons - they auto-register with AddonRegistry
+import './addons/terrain/uneven-terrain.js';
+import './addons/races/human.js';
+import './addons/mechanics/resource.js';
+import './addons/mechanics/combat.js';
+import './addons/ai/basicAI.js';
 
-        // Make addonLoader accessible from gameEngine
-        this.gameEngine.getAddon = (name) => this.addonLoader.getAddon(name);
-        this.gameEngine.players = new Map(); // Initialize players map
-        
-        console.log('📍 Current location:', window.location.href);
-        console.log('📂 Script path:', import.meta.url);
-        
-        this.addonLoader = new AddonLoader(this.gameEngine, '/sc/addons/');
-        
-        this.players = this.gameEngine.players; // Use the same map
-        this.gameState = 'lobby';
-        this.currentPlayerId = null;
-        this.lastFrameTime = 0;
-        this.isInitialized = false;
-        this.gameLoopRunning = false;
-    }
-
-    async initialize() {
-        console.log('🚀 Initializing StarCraft-like RTS...');
-        
-        try {
-            // Create status display
-            this.createStatusDisplay();
-            this.updateStatus('Initializing game engine...', 'loading');
-            
-            // First initialize the game engine
-            await this.gameEngine.init();
-            this.updateStatus('Game engine initialized', 'success');
-            
-            // Define addons with ABSOLUTE paths for XAMPP
-            const addonList = {
-                // Core systems - using absolute paths
-                'terrain': '/sc/addons/terrain/uneven-terrain.js',
-                'resource': '/sc/addons/mechanics/resource.js',
-                'combat': '/sc/addons/mechanics/combat.js',
-                'basicAI': '/sc/addons/ai/basicAI.js'
-            };
-            
-            this.updateStatus('Loading addons...', 'loading');
-            
-            // Load addons
-            const results = await this.addonLoader.loadAddons(addonList);
-            
-            // Display results
-            console.log('📊 Addon loading results:');
-            const successCount = results.filter(r => r.success).length;
-            
-            if (successCount > 0) {
-                this.updateStatus(`${successCount}/${results.length} addons loaded`, 'success');
-            } else {
-                this.updateStatus('No addons loaded successfully', 'error');
-            }
-            
-            results.forEach(result => {
-                if (result.success) {
-                    console.log(`  ✅ ${result.name}: Loaded`);
-                } else {
-                    console.log(`  ❌ ${result.name}: ${result.error}`);
-                }
-            });
-            
-            // Set up event listeners
-            this.setupEventListeners();
-            this.updateStatus('Setting up event system...', 'loading');
-            
-            // Add a test player
-            this.addTestPlayer();
-            this.updateStatus('Test players added', 'success');
-            
-            // Mark game as initialized (this will trigger loading screen hide)
-            this.isInitialized = true;
-            if (window.markGameInitialized) {
-                window.markGameInitialized();
-            }
-            
-            // Start game loop
-            this.startGameLoop();
-            this.updateStatus('Game started! Click to interact', 'success');
-            
-            console.log('🎮 Game initialization complete!');
-            
-        } catch (error) {
-            console.error('❌ Initialization failed:', error);
-            this.updateStatus(`Error: ${error.message}`, 'error');
-            this.showError(error.message);
-            
-            // Still try to hide loading screen on error
-            if (window.markGameInitialized) {
-                window.markGameInitialized();
-            }
-        }
-    }
-
-    startGameLoop() {
-        // Don't start multiple game loops
-        if (this.gameLoopRunning) {
-            console.warn('Game loop already running');
-            return;
-        }
-        
-        this.gameLoopRunning = true;
-        let lastTime = 0;
-        
-        const tick = (currentTime) => {
-            // Check if game should continue running
-            if (!this.gameLoopRunning) return;
-            
-            const deltaTime = currentTime - lastTime || 0;
-            lastTime = currentTime;
-            
-            // Update game
-            this.update(deltaTime, currentTime);
-            
-            // Render
-            this.render();
-            
-            // Continue loop
-            requestAnimationFrame(tick);
-        };
-        
-        // Start the game loop
-        requestAnimationFrame(tick);
-        console.log('🎮 Game loop started');
-    }
-
-    // Add a method to stop the game loop if needed
-    stopGameLoop() {
-        this.gameLoopRunning = false;
-        console.log('⏹️ Game loop stopped');
-    }
-    createStatusDisplay() {
-        // Remove existing status if any
-        const existingStatus = document.getElementById('gameStatus');
-        if (existingStatus) existingStatus.remove();
-        
-        // Create status element
-        this.statusElement = document.createElement('div');
-        this.statusElement.id = 'gameStatus';
-        this.statusElement.style.cssText = `
-            position: fixed;
-            top: 20px;
-            left: 20px;
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 15px;
-            border-radius: 8px;
-            font-family: monospace;
-            font-size: 14px;
-            z-index: 1000;
-            max-width: 300px;
-            border-left: 4px solid #3498db;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-        `;
-        document.body.appendChild(this.statusElement);
-    }
-
-    updateStatus(message, type = 'info') {
-        if (!this.statusElement) return;
-        
-        const colors = {
-            loading: '#3498db',
-            success: '#2ecc71',
-            error: '#e74c3c',
-            info: '#f39c12'
-        };
-        
-        const icons = {
-            loading: '⏳',
-            success: '✅',
-            error: '❌',
-            info: 'ℹ️'
-        };
-        
-        this.statusElement.innerHTML = `
-            <div style="margin-bottom: 5px; font-weight: bold;">
-                ${icons[type] || icons.info} Game Status
-            </div>
-            <div>${message}</div>
-        `;
-        
-        this.statusElement.style.borderLeftColor = colors[type] || colors.info;
-        
-        // Also log to console
-        console.log(`📝 ${message}`);
-    }
-
-    setupEventListeners() {
-        // Listen for addon events
-        this.gameEngine.on('addon:loaded', (data) => {
-            console.log(`📡 Addon ${data.name} is ready`);
-        });
-        
-        // Listen for player events
-        this.gameEngine.on('player:added', (player) => {
-            console.log(`👤 Player ${player.id} (${player.name}) joined`);
-            this.players.set(player.id, player);
-            
-            // Initialize resources for player if resource addon is loaded
-            const resourceSystem = this.addonLoader.getAddon('resource');
-            if (resourceSystem) {
-                resourceSystem.addPlayerResources(player.id, { minerals: 50, vespene: 0 });
-            }
-        });
-        
-        // Listen for click events
-        this.gameEngine.on('click', (data) => {
-            console.log(`🖱️ Click at (${data.x}, ${data.y})`);
-            
-            // Create a unit at click location if combat system is loaded
-            const combatSystem = this.addonLoader.getAddon('combat');
-            if (combatSystem && this.currentPlayerId) {
-                combatSystem.createUnit(this.currentPlayerId, 'marine', data.x, data.y);
-                this.updateStatus(`Created marine at (${Math.round(data.x)}, ${Math.round(data.y)})`, 'info');
-            }
-        });
-        
-        // Listen for key events
-        this.gameEngine.on('keydown', (event) => {
-            if (event.key === 'r' || event.key === 'R') {
-                this.addResources();
-            } else if (event.key === 'u' || event.key === 'U') {
-                this.createRandomUnit();
-            } else if (event.key === ' ' || event.key === 'Spacebar') {
-                this.togglePause();
-            }
-        });
-    }
-
-    addTestPlayer() {
-        // Add human player
-        const playerId = this.gameEngine.addPlayer({
-            name: 'Player 1',
-            race: 'Terran',
-            isAI: false,
-            color: '#3498db'
-        });
-        
-        this.currentPlayerId = playerId;
-        
-        // Add an AI player if AI system is loaded
-        const aiSystem = this.addonLoader.getAddon('basicAI');
-        if (aiSystem) {
-            const aiPlayerId = this.gameEngine.addPlayer({
-                name: 'Computer',
-                race: 'Zerg',
-                isAI: true,
-                difficulty: 'medium',
-                color: '#e74c3c'
-            });
-            
-            aiSystem.addAIPlayer(aiPlayerId, 'medium');
-            console.log(`🤖 Added AI player: ${aiPlayerId}`);
-        }
-        
-        console.log('👥 Test players added');
-    }
-
-    startGameLoop() {
-        let lastTime = 0;
-        
-        const tick = (currentTime) => {
-            const deltaTime = currentTime - lastTime || 0;
-            lastTime = currentTime;
-            
-            // Update game
-            this.update(deltaTime, currentTime);
-            
-            // Render
-            this.render();
-            
-            // Continue loop
-            requestAnimationFrame(tick);
-        };
-        
-        // Start the game loop
-        requestAnimationFrame(tick);
-        console.log('🎮 Game loop started');
-    }
-
-    update(deltaTime, currentTime) {
-        // Skip update if paused
-        if (this.gameState === 'paused') return;
-        
-        // Update game engine
-        this.gameEngine.update(deltaTime, currentTime);
-        
-        // Update AI players
-        const aiSystem = this.addonLoader.getAddon('basicAI');
-        if (aiSystem) {
-            for (const [playerId, player] of this.players) {
-                if (player.isAI) {
-                    aiSystem.updateAI(playerId);
-                }
-            }
-        }
-        
-        // Broadcast update to all addons
-        this.addonLoader.broadcastEvent('update', { deltaTime, currentTime });
-    }
-
-    render() {
-        const canvas = this.gameEngine.getCanvas();
-        if (!canvas) return;
-        
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return;
-        
-        // Clear canvas with a dark background
-        ctx.fillStyle = '#0d1117';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Render terrain if available
-        const terrain = this.addonLoader.getAddon('terrain');
-        if (terrain && typeof terrain.render === 'function') {
-            terrain.render(ctx);
-        } else {
-            // Fallback: draw grid
-            this.drawGrid(ctx);
-        }
-        
-        // Render debug info
-        this.renderDebugInfo(ctx);
-    }
-
-    drawGrid(ctx) {
-        const canvas = this.gameEngine.getCanvas();
-        ctx.strokeStyle = '#2c3e50';
-        ctx.lineWidth = 1;
-        
-        const gridSize = 32;
-        
-        // Draw vertical lines
-        for (let x = 0; x < canvas.width; x += gridSize) {
-            ctx.beginPath();
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, canvas.height);
-            ctx.stroke();
-        }
-        
-        // Draw horizontal lines
-        for (let y = 0; y < canvas.height; y += gridSize) {
-            ctx.beginPath();
-            ctx.moveTo(0, y);
-            ctx.lineTo(canvas.width, y);
-            ctx.stroke();
-        }
-        
-        // Draw coordinates at corners
-        ctx.fillStyle = '#58a6ff';
-        ctx.font = '12px Arial';
-        ctx.fillText('(0,0)', 5, 15);
-        ctx.fillText(`(${canvas.width},${canvas.height})`, canvas.width - 40, canvas.height - 5);
-    }
-
-    renderDebugInfo(ctx) {
-        const canvas = this.gameEngine.getCanvas();
-        
-        // Draw game state info panel
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(10, 10, 200, 120);
-        
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '14px monospace';
-        
-        let y = 30;
-        const lineHeight = 20;
+class Game {
+    constructor(canvasId) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.gameEngine = new GameEngine(canvasId);
         
         // Game state
-        ctx.fillText(`State: ${this.gameState}`, 20, y);
-        y += lineHeight;
+        this.entities = [];
+        this.selectedEntities = [];
+        this.camera = { x: 0, y: 0, zoom: 1 };
+        this.mouse = { x: 0, y: 0, down: false };
+        this.keys = {};
         
-        // Player count
-        ctx.fillText(`Players: ${this.players.size}`, 20, y);
-        y += lineHeight;
+        // Initialize addons through the engine
+        this.initializeAddons();
         
-        // Addon count
-        const addonCount = this.addonLoader.listAddons().length;
-        ctx.fillText(`Addons: ${addonCount}`, 20, y);
-        y += lineHeight;
+        // Set up event listeners
+        this.setupEventListeners();
         
-        // Resources for current player
-        if (this.currentPlayerId) {
-            const resourceSystem = this.addonLoader.getAddon('resource');
-            if (resourceSystem) {
-                const resources = resourceSystem.getResources(this.currentPlayerId);
-                ctx.fillText(`Minerals: ${resources.minerals}`, 20, y);
-                y += lineHeight;
-                ctx.fillText(`Vespene: ${resources.vespene}`, 20, y);
-                y += lineHeight;
+        // Start game loop
+        this.lastTime = 0;
+        this.running = true;
+        requestAnimationFrame(this.loop.bind(this));
+        
+        console.log('Game initialized with modular addon system');
+    }
+    
+    initializeAddons() {
+        // Addons are already registered during import
+        // Now initialize them through the game engine
+        console.log('Initializing addons...');
+        
+        // Test addon functionality
+        setTimeout(() => {
+            if (this.gameEngine.resources) {
+                console.log('✅ Resource system active');
+                console.log('Player resources:', this.gameEngine.resources.getResource('player1', 'gold'));
+            }
+            
+            if (this.gameEngine.combat) {
+                console.log('✅ Combat system active');
+            }
+            
+            // List all registered addons
+            const addonList = AddonRegistry.listAddons();
+            console.log(`📦 Total addons: ${addonList.length}`, addonList);
+        }, 100);
+    }
+    
+    setupEventListeners() {
+        // Mouse events
+        this.canvas.addEventListener('mousedown', (e) => {
+            this.mouse.down = true;
+            this.mouse.x = e.offsetX;
+            this.mouse.y = e.offsetY;
+            
+            // Selection logic
+            this.handleSelection();
+        });
+        
+        this.canvas.addEventListener('mouseup', (e) => {
+            this.mouse.down = false;
+        });
+        
+        this.canvas.addEventListener('mousemove', (e) => {
+            this.mouse.x = e.offsetX;
+            this.mouse.y = e.offsetY;
+            
+            // Camera panning
+            if (this.mouse.down && e.buttons === 2) {
+                this.camera.x -= e.movementX / this.camera.zoom;
+                this.camera.y -= e.movementY / this.camera.zoom;
+            }
+        });
+        
+        this.canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            
+            // Right-click actions
+            if (this.selectedEntities.length > 0) {
+                const worldX = this.mouse.x / this.camera.zoom + this.camera.x;
+                const worldY = this.mouse.y / this.camera.zoom + this.camera.y;
+                
+                // Use combat addon if available
+                if (this.gameEngine.combat) {
+                    // Check for attack targets
+                    const target = this.findEntityAt(worldX, worldY);
+                    if (target && target.owner !== 'player1') {
+                        this.gameEngine.combat.attackEntities(this.selectedEntities, target);
+                    } else {
+                        // Move command
+                        this.selectedEntities.forEach(entity => {
+                            entity.targetX = worldX;
+                            entity.targetY = worldY;
+                        });
+                    }
+                } else {
+                    // Fallback movement
+                    this.selectedEntities.forEach(entity => {
+                        entity.targetX = worldX;
+                        entity.targetY = worldY;
+                    });
+                }
+            }
+        });
+        
+        // Keyboard events
+        window.addEventListener('keydown', (e) => {
+            this.keys[e.key.toLowerCase()] = true;
+            
+            // Camera zoom
+            if (e.key === '+' || e.key === '=') {
+                this.camera.zoom = Math.min(2, this.camera.zoom * 1.1);
+            } else if (e.key === '-' || e.key === '_') {
+                this.camera.zoom = Math.max(0.5, this.camera.zoom / 1.1);
+            }
+            
+            // Group selection (Ctrl + number)
+            if (e.ctrlKey && e.key >= '1' && e.key <= '9') {
+                this.saveSelectionGroup(parseInt(e.key));
+            }
+            
+            // Load selection group (number)
+            if (!e.ctrlKey && e.key >= '1' && e.key <= '9') {
+                this.loadSelectionGroup(parseInt(e.key));
+            }
+        });
+        
+        window.addEventListener('keyup', (e) => {
+            this.keys[e.key.toLowerCase()] = false;
+        });
+        
+        // Mouse wheel for zoom
+        this.canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            this.camera.zoom = Math.max(0.5, Math.min(2, this.camera.zoom * zoomFactor));
+        });
+    }
+    
+    handleSelection() {
+        const worldX = this.mouse.x / this.camera.zoom + this.camera.x;
+        const worldY = this.mouse.y / this.camera.zoom + this.camera.y;
+        
+        // Find entity at click position
+        const clickedEntity = this.findEntityAt(worldX, worldY);
+        
+        if (clickedEntity) {
+            // Select single entity
+            if (this.keys.control) {
+                // Ctrl+click: toggle selection
+                const index = this.selectedEntities.indexOf(clickedEntity);
+                if (index > -1) {
+                    this.selectedEntities.splice(index, 1);
+                } else {
+                    this.selectedEntities.push(clickedEntity);
+                }
+            } else {
+                // Regular click: replace selection
+                this.selectedEntities = [clickedEntity];
+            }
+        } else {
+            // Box selection (if dragging)
+            if (!this.keys.shift) {
+                this.selectedEntities = [];
+            }
+            // Box selection logic would go here
+        }
+        
+        console.log(`Selected ${this.selectedEntities.length} entities`);
+    }
+    
+    findEntityAt(x, y) {
+        for (const entity of this.entities) {
+            const dx = entity.x - x;
+            const dy = entity.y - y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < entity.radius) {
+                return entity;
+            }
+        }
+        return null;
+    }
+    
+    saveSelectionGroup(groupNumber) {
+        // Save current selection to a group
+        this.selectionGroups = this.selectionGroups || {};
+        this.selectionGroups[groupNumber] = [...this.selectedEntities];
+        console.log(`Selection saved to group ${groupNumber}`);
+    }
+    
+    loadSelectionGroup(groupNumber) {
+        // Load selection from a group
+        if (this.selectionGroups && this.selectionGroups[groupNumber]) {
+            this.selectedEntities = [...this.selectionGroups[groupNumber]];
+            console.log(`Selection loaded from group ${groupNumber}`);
+        }
+    }
+    
+    loop(timestamp) {
+        const deltaTime = timestamp - this.lastTime;
+        this.lastTime = timestamp;
+        
+        // Update game state
+        this.update(deltaTime);
+        
+        // Render everything
+        this.render();
+        
+        // Continue loop
+        if (this.running) {
+            requestAnimationFrame(this.loop.bind(this));
+        }
+    }
+    
+    update(deltaTime) {
+        // Update entities
+        for (const entity of this.entities) {
+            // Movement toward target
+            if (entity.targetX !== undefined && entity.targetY !== undefined) {
+                const dx = entity.targetX - entity.x;
+                const dy = entity.targetY - entity.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > 1) {
+                    const speed = entity.speed || 2;
+                    entity.x += (dx / distance) * speed;
+                    entity.y += (dy / distance) * speed;
+                }
+            }
+            
+            // Addon updates
+            if (this.gameEngine.combat && entity.health !== undefined && entity.health <= 0) {
+                // Remove dead entities
+                const index = this.entities.indexOf(entity);
+                if (index > -1) {
+                    this.entities.splice(index, 1);
+                    // Remove from selection if selected
+                    const selIndex = this.selectedEntities.indexOf(entity);
+                    if (selIndex > -1) {
+                        this.selectedEntities.splice(selIndex, 1);
+                    }
+                }
             }
         }
         
-        // Controls hint
-        ctx.fillStyle = '#58a6ff';
-        ctx.font = '12px monospace';
-        ctx.fillText('Controls: R=Resources, U=Unit, Space=Pause', 20, canvas.height - 20);
-        
-        // FPS
-        if (this.lastFrameTime) {
-            const fps = Math.round(1000 / (Date.now() - this.lastFrameTime));
-            ctx.fillStyle = fps > 30 ? '#2ecc71' : '#e74c3c';
-            ctx.fillText(`FPS: ${fps}`, canvas.width - 80, 25);
-        }
-        this.lastFrameTime = Date.now();
-    }
-
-    // Helper methods for controls
-    addResources() {
-        const resourceSystem = this.addonLoader.getAddon('resource');
-        if (resourceSystem && this.currentPlayerId) {
-            resourceSystem.addResources(this.currentPlayerId, 'minerals', 100);
-            console.log(`➕ Added 100 minerals to player ${this.currentPlayerId}`);
-            this.updateStatus('+100 minerals', 'success');
+        // Update addons
+        if (this.gameEngine.ai) {
+            this.gameEngine.ai.update(this.entities, deltaTime);
         }
     }
-
-    createRandomUnit() {
-        const combatSystem = this.addonLoader.getAddon('combat');
-        if (combatSystem && this.currentPlayerId) {
-            const x = Math.floor(Math.random() * 300) + 50;
-            const y = Math.floor(Math.random() * 300) + 50;
-            combatSystem.createUnit(this.currentPlayerId, 'marine', x, y);
-            console.log(`🎖️ Created marine at (${x}, ${y})`);
-            this.updateStatus(`Created unit at (${x}, ${y})`, 'info');
+    
+    render() {
+        // Clear canvas
+        this.ctx.fillStyle = '#1a1a2e';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Save context for camera transform
+        this.ctx.save();
+        
+        // Apply camera transform
+        this.ctx.translate(-this.camera.x * this.camera.zoom, -this.camera.y * this.camera.zoom);
+        this.ctx.scale(this.camera.zoom, this.camera.zoom);
+        
+        // Render terrain using addon if available
+        if (this.gameEngine.terrain) {
+            this.gameEngine.terrain.render(this.ctx, this.camera);
+        } else {
+            // Default grid
+            this.renderGrid();
+        }
+        
+        // Render entities
+        for (const entity of this.entities) {
+            this.renderEntity(entity);
+        }
+        
+        // Render selection
+        for (const entity of this.selectedEntities) {
+            this.renderSelection(entity);
+        }
+        
+        // Restore context
+        this.ctx.restore();
+        
+        // Render UI
+        this.renderUI();
+    }
+    
+    renderGrid() {
+        const gridSize = 50;
+        const startX = Math.floor(this.camera.x / gridSize) * gridSize;
+        const startY = Math.floor(this.camera.y / gridSize) * gridSize;
+        const endX = startX + (this.canvas.width / this.camera.zoom) + gridSize;
+        const endY = startY + (this.canvas.height / this.camera.zoom) + gridSize;
+        
+        this.ctx.strokeStyle = '#2d3047';
+        this.ctx.lineWidth = 1;
+        
+        for (let x = startX; x < endX; x += gridSize) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, startY);
+            this.ctx.lineTo(x, endY);
+            this.ctx.stroke();
+        }
+        
+        for (let y = startY; y < endY; y += gridSize) {
+            this.ctx.beginPath();
+            this.ctx.moveTo(startX, y);
+            this.ctx.lineTo(endX, y);
+            this.ctx.stroke();
         }
     }
-
-    togglePause() {
-        this.gameState = this.gameState === 'playing' ? 'paused' : 'playing';
-        console.log(`⏸️ Game ${this.gameState}`);
-        this.updateStatus(`Game ${this.gameState}`, this.gameState === 'paused' ? 'error' : 'success');
+    
+    renderEntity(entity) {
+        this.ctx.fillStyle = entity.color || '#4ecdc4';
+        this.ctx.beginPath();
+        this.ctx.arc(entity.x, entity.y, entity.radius || 10, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // Health bar (if entity has health)
+        if (entity.health !== undefined && entity.maxHealth !== undefined) {
+            const barWidth = 20;
+            const barHeight = 3;
+            const healthPercent = entity.health / entity.maxHealth;
+            
+            this.ctx.fillStyle = '#ff6b6b';
+            this.ctx.fillRect(entity.x - barWidth/2, entity.y - 20, barWidth, barHeight);
+            
+            this.ctx.fillStyle = '#51cf66';
+            this.ctx.fillRect(entity.x - barWidth/2, entity.y - 20, barWidth * healthPercent, barHeight);
+        }
+        
+        // Owner indicator
+        if (entity.owner) {
+            this.ctx.fillStyle = entity.owner === 'player1' ? '#4ecdc4' : '#ff6b6b';
+            this.ctx.beginPath();
+            this.ctx.arc(entity.x, entity.y + 15, 3, 0, Math.PI * 2);
+            this.ctx.fill();
+        }
     }
-
-    showError(message) {
-        // Create error display
-        const errorDiv = document.createElement('div');
-        errorDiv.style.cssText = `
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: #e74c3c;
-            color: white;
-            padding: 20px 30px;
-            border-radius: 8px;
-            font-family: Arial, sans-serif;
-            font-size: 16px;
-            z-index: 1001;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-            text-align: center;
-            max-width: 500px;
-            animation: fadeIn 0.3s ease-in;
-        `;
+    
+    renderSelection(entity) {
+        this.ctx.strokeStyle = '#ffe66d';
+        this.ctx.lineWidth = 2;
+        this.ctx.beginPath();
+        this.ctx.arc(entity.x, entity.y, (entity.radius || 10) + 5, 0, Math.PI * 2);
+        this.ctx.stroke();
+    }
+    
+    renderUI() {
+        // Mini-map
+        const minimapSize = 100;
+        const minimapX = this.canvas.width - minimapSize - 10;
+        const minimapY = 10;
         
-        errorDiv.innerHTML = `
-            <strong style="font-size: 18px;">⚠️ Initialization Error</strong><br><br>
-            ${message}<br><br>
-            <small style="opacity: 0.8;">Check browser console (F12) for details</small><br><br>
-            <button onclick="this.parentNode.remove()" style="
-                background: white;
-                color: #e74c3c;
-                border: none;
-                padding: 8px 16px;
-                border-radius: 4px;
-                cursor: pointer;
-                font-weight: bold;
-            ">Close</button>
-        `;
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        this.ctx.fillRect(minimapX, minimapY, minimapSize, minimapSize);
         
-        document.body.appendChild(errorDiv);
+        // Resource display
+        if (this.gameEngine.resources) {
+            this.ctx.fillStyle = 'white';
+            this.ctx.font = '14px Arial';
+            
+            const resources = this.gameEngine.resources;
+            const gold = resources.getResource('player1', 'gold');
+            const wood = resources.getResource('player1', 'wood');
+            
+            this.ctx.fillText(`Gold: ${gold}`, 10, 25);
+            this.ctx.fillText(`Wood: ${wood}`, 10, 45);
+        }
         
-        // Add fadeIn animation
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes fadeIn {
-                from { opacity: 0; transform: translate(-50%, -60%); }
-                to { opacity: 1; transform: translate(-50%, -50%); }
+        // Selection info
+        if (this.selectedEntities.length > 0) {
+            this.ctx.fillStyle = 'white';
+            this.ctx.font = '12px Arial';
+            this.ctx.fillText(`Selected: ${this.selectedEntities.length} units`, 10, 70);
+            
+            const firstEntity = this.selectedEntities[0];
+            if (firstEntity.health !== undefined) {
+                this.ctx.fillText(`Health: ${firstEntity.health}/${firstEntity.maxHealth}`, 10, 90);
             }
-        `;
-        document.head.appendChild(style);
+        }
+        
+        // Addon status
+        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+        this.ctx.font = '10px Arial';
+        const addonCount = AddonRegistry.listAddons().length;
+        this.ctx.fillText(`Addons: ${addonCount} active`, this.canvas.width - 100, this.canvas.height - 10);
+    }
+    
+    // Helper methods for game setup
+    addEntity(entity) {
+        this.entities.push(entity);
+    }
+    
+    spawnTestUnits() {
+        // Player units
+        this.addEntity({
+            x: 100, y: 100,
+            radius: 10,
+            color: '#4ecdc4',
+            owner: 'player1',
+            health: 100,
+            maxHealth: 100,
+            speed: 2
+        });
+        
+        this.addEntity({
+            x: 150, y: 100,
+            radius: 10,
+            color: '#4ecdc4',
+            owner: 'player1',
+            health: 100,
+            maxHealth: 100,
+            speed: 2
+        });
+        
+        // Enemy units
+        this.addEntity({
+            x: 300, y: 300,
+            radius: 12,
+            color: '#ff6b6b',
+            owner: 'enemy',
+            health: 150,
+            maxHealth: 150,
+            speed: 1.5
+        });
+        
+        console.log('Test units spawned');
+    }
+    
+    stop() {
+        this.running = false;
     }
 }
 
-// Start the game when DOM is loaded
+// Initialize game when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('📄 DOM loaded, starting game...');
+    const game = new Game('gameCanvas');
     
-    // Create game instance
-    const game = new StarCraftLikeRTS();
+    // Spawn some test units
+    setTimeout(() => {
+        game.spawnTestUnits();
+    }, 500);
     
-    // Expose to window for debugging and controls
-    window.rtsGame = game;
+    // Make game available globally for debugging
+    window.gameInstance = game;
     
-    // Initialize game
-    game.initialize();
+    console.log('🎮 Modular RTS Game v1.0 Ready');
 });
