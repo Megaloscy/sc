@@ -1,3 +1,8 @@
+import AddonRegistry from '../../addon-registry.js';
+
+
+
+
 export default class ZergRace {
     constructor(gameEngine) {
         this.gameEngine = gameEngine;
@@ -274,4 +279,5 @@ export default class ZergRace {
                 break;
         }
     }
+
 }
