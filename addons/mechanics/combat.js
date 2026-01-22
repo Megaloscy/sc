@@ -1,3 +1,8 @@
+import AddonRegistry from '../../addon-registry.js';
+
+
+
+
 export default class CombatSystem {
     constructor(gameEngine) {
         this.gameEngine = gameEngine;
@@ -148,4 +153,5 @@ export default class CombatSystem {
         console.log('Combat system destroyed');
         this.units.clear();
     }
+
 }
