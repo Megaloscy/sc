@@ -1,3 +1,4 @@
+import AddonRegistry from '../../addon-registry.js';
 export default class StrategicAI {
     constructor(gameEngine) {
         this.gameEngine = gameEngine;
