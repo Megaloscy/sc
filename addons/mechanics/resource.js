@@ -1,105 +1,70 @@
-export default class ResourceSystem {
-    constructor(gameEngine) {
-        this.gameEngine = gameEngine;
-        this.name = 'resource';
-        this.resources = new Map();
-        this.mineralFields = [];
-        this.dependencies = [];
+// addons/mechanics/resource.js
+import AddonRegistry from '../addon-registry.js';
+
+class ResourceSystem {
+    constructor() {
+        this.resources = {
+            gold: 1000,
+            wood: 500,
+            stone: 200,
+            food: 100
+        };
+        this.players = {};
     }
 
-    async init() {
-        console.log('Initializing ResourceSystem...');
-        this.generateMineralFields();
-        return this;
+    addPlayer(playerId) {
+        this.players[playerId] = { ...this.resources };
+        return this.players[playerId];
     }
 
-    generateMineralFields() {
-        const mapSize = { width: 128, height: 128 };
-        this.mineralFields = [];
-        
-        // Create 8 mineral fields
-        for (let i = 0; i < 8; i++) {
-            this.mineralFields.push({
-                id: `mineral_${i}`,
-                x: Math.floor(Math.random() * (mapSize.width - 10)) + 5,
-                y: Math.floor(Math.random() * (mapSize.height - 10)) + 5,
-                minerals: 1500,
-                workers: []
-            });
-        }
-        
-        console.log(`Generated ${this.mineralFields.length} mineral fields`);
-        return this.mineralFields;
+    getResource(playerId, resourceType) {
+        return this.players[playerId]?.[resourceType] || 0;
     }
 
-    addPlayerResources(playerId, initialResources = { minerals: 50, vespene: 0 }) {
-        this.resources.set(playerId, { ...initialResources });
-        console.log(`Added resources for player ${playerId}:`, initialResources);
-    }
-
-    getResources(playerId) {
-        return this.resources.get(playerId) || { minerals: 0, vespene: 0 };
-    }
-
-    addResources(playerId, type, amount) {
-        const playerResources = this.getResources(playerId);
-        if (playerResources[type] !== undefined) {
-            playerResources[type] += amount;
-            this.resources.set(playerId, playerResources);
-            
-            // Trigger event
-            this.gameEngine.triggerEvent('resources:changed', {
-                playerId,
-                type,
-                amount,
-                total: playerResources[type]
-            });
-            
+    addResource(playerId, resourceType, amount) {
+        if (this.players[playerId]) {
+            this.players[playerId][resourceType] += amount;
             return true;
         }
         return false;
     }
 
-    deductResources(playerId, costs) {
-        const playerResources = this.getResources(playerId);
-        
-        // Check if player has enough resources
-        for (const [type, amount] of Object.entries(costs)) {
-            if ((playerResources[type] || 0) < amount) {
-                return false;
-            }
-        }
-        
-        // Deduct resources
-        for (const [type, amount] of Object.entries(costs)) {
-            playerResources[type] -= amount;
-        }
-        
-        this.resources.set(playerId, playerResources);
-        
-        // Trigger event
-        this.gameEngine.triggerEvent('resources:deducted', {
-            playerId,
-            costs,
-            remaining: playerResources
-        });
-        
-        return true;
-    }
-
-    onEvent(eventName, data) {
-        switch (eventName) {
-            case 'player:added':
-                // Initialize resources for new player
-                this.addPlayerResources(data.id, { minerals: 50, vespene: 0 });
-                break;
-                
-            case 'unit:gather':
-                // Handle resource gathering
-                if (data.playerId && data.type && data.amount) {
-                    this.addResources(data.playerId, data.type, data.amount);
-                }
-                break;
-        }
-    }
+    // ... more resource management methods ...
 }
+
+// Register this addon with the system
+AddonRegistry.register('ResourceSystem', 
+    // Initialization function
+    (gameEngine) => {
+        // Create instance
+        const resourceSystem = new ResourceSystem();
+        
+        // Attach to game engine for global access
+        gameEngine.resources = resourceSystem;
+        
+        // Also store in addon registry for direct access
+        const addonData = AddonRegistry.getAddon('ResourceSystem');
+        if (addonData) {
+            addonData.instance = resourceSystem;
+        }
+        
+        // Example: Add default player
+        resourceSystem.addPlayer('player1');
+        
+        console.log('ResourceSystem addon initialized');
+    },
+    // Optional configuration
+    {
+        version: '1.0.0',
+        author: 'Game Dev',
+        defaultResources: {
+            gold: 1000,
+            wood: 500,
+            stone: 200,
+            food: 100
+        }
+    }
+);
+
+// Optional: Keep the export for direct module usage
+export default ResourceSystem;
