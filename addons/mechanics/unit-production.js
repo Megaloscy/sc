@@ -1,3 +1,8 @@
+import AddonRegistry from '../../addon-registry.js';
+
+
+
+
 export default class UnitProduction {
     constructor(gameEngine) {
         this.gameEngine = gameEngine;
@@ -53,4 +58,5 @@ export default class UnitProduction {
     }
     
     // ... rest of the class methods ...
+
 }
