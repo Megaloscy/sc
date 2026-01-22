@@ -80,6 +80,36 @@ class AddonRegistry {
     static listAddons() {
         return Array.from(this.addons.keys());
     }
+	
+	
+	// Add to AddonRegistry class:
+static enableAddon(name) {
+    const addon = this.addons.get(name);
+    if (addon && !addon.enabled) {
+        addon.enabled = true;
+        if (this.gameEngine && !addon.initialized) {
+            this.initializeAddon(name);
+        }
+    }
+}
+
+static disableAddon(name) {
+    const addon = this.addons.get(name);
+    if (addon) {
+        addon.enabled = false;
+        // Optionally clean up
+    }
+}
+
+static getAddonStatus() {
+    return Array.from(this.addons.entries()).map(([name, data]) => ({
+        name,
+        initialized: data.initialized || false,
+        enabled: data.enabled !== false
+    }));
+}
+
+
 }
 
 // Export the registry

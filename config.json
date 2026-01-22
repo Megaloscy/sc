@@ -1,0 +1,8 @@
+{
+    "requiredAddons": ["ResourceSystem", "CombatSystem"],
+    "optionalAddons": ["TerrainSystem", "AISystem", "RaceSystem"],
+    "addonSettings": {
+        "ResourceSystem": {"startingGold": 1000},
+        "CombatSystem": {"friendlyFire": false}
+    }
+}
