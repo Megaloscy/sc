@@ -1,119 +1,110 @@
 // Make sure you're using export default with a class
-export default class UnevenTerrain {
-    constructor(gameEngine) {
-        this.gameEngine = gameEngine;
-        this.name = 'terrain';
-        this.map = null;
-        this.tileSize = 32;
-        
-        // Optional: declare dependencies
-        this.dependencies = [];
-    }
+import AddonRegistry from '/sc/addons/addon-registry.js';
 
-    async init() {
-        console.log('Initializing UnevenTerrain...');
-        this.generateMap(128, 128);
-        return this;
-    }
 
-    generateMap(width, height) {
-        this.map = {
-            width: width,
-            height: height,
-            tiles: []
+class TerrainSystem {
+    constructor() {
+        this.grid = [];
+        this.gridSize = 10;
+        this.terrainTypes = {
+            grass: { color: '#2d6a4f', moveCost: 1 },
+            forest: { color: '#1b4332', moveCost: 2 },
+            mountain: { color: '#6c757d', moveCost: 3 },
+            water: { color: '#03045e', moveCost: 999 }
         };
+    }
+
+    generateTerrain(width = 1600, height = 1400) {
+        console.log(`🌄 Generating terrain ${width}x${height}`);
         
-        // Generate simple terrain
-        for (let y = 0; y < height; y++) {
-            const row = [];
-            for (let x = 0; x < width; x++) {
-                // Simple terrain types
+        for (let x = 0; x < width; x += this.gridSize) {
+            this.grid[x] = this.grid[x] || [];
+            for (let y = 0; y < height; y += this.gridSize) {
+                // Simple terrain generation
                 const noise = Math.random();
-                let type = 'grass';
-                if (noise < 0.1) type = 'rock';
-                if (noise > 0.9) type = 'water';
+                let terrainType;
                 
-                row.push({
-                    type: type,
-                    passable: type !== 'water',
-                    buildable: type === 'grass',
-                    height: Math.random() * 0.5
-                });
-            }
-            this.map.tiles.push(row);
-        }
-        
-        console.log(`Terrain map generated: ${width}x${height}`);
-        return this.map;
-    }
-
-    getMapSize() {
-        return this.map ? { width: this.map.width, height: this.map.height } : { width: 0, height: 0 };
-    }
-
-    isPassable(x, y) {
-        if (!this.map || x < 0 || x >= this.map.width || y < 0 || y >= this.map.height) {
-            return false;
-        }
-        return this.map.tiles[y][x].passable;
-    }
-
-    isBuildable(x, y) {
-        if (!this.map || x < 0 || x >= this.map.width || y < 0 || y >= this.map.height) {
-            return false;
-        }
-        return this.map.tiles[y][x].buildable;
-    }
-
-    render(ctx) {
-        if (!this.map || !ctx) return;
-        
-        const colors = {
-            grass: '#3a7d34',
-            rock: '#808080',
-            water: '#1e90ff'
-        };
-        
-        for (let y = 0; y < this.map.height; y++) {
-            for (let x = 0; x < this.map.width; x++) {
-                const tile = this.map.tiles[y][x];
-                ctx.fillStyle = colors[tile.type] || '#000000';
-                ctx.fillRect(x * this.tileSize, y * this.tileSize, this.tileSize, this.tileSize);
+                if (noise < 0.6) terrainType = 'grass';
+                else if (noise < 0.8) terrainType = 'forest';
+                else if (noise < 0.95) terrainType = 'mountain';
+                else terrainType = 'water';
                 
-                // Add height variation
-                if (tile.height > 0) {
-                    ctx.fillStyle = `rgba(0, 0, 0, ${tile.height * 0.3})`;
-                    ctx.fillRect(x * this.tileSize, y * this.tileSize, this.tileSize, this.tileSize);
-                }
+                this.grid[x][y] = {
+                    type: terrainType,
+                    x: x,
+                    y: y,
+                    ...this.terrainTypes[terrainType]
+                };
             }
         }
+        
+        console.log(`✅ Terrain generated with ${Math.floor(width/this.gridSize) * Math.floor(height/this.gridSize)} tiles`);
+        return this.grid;
     }
 
-    // Event handler for addon system
-    onEvent(eventName, data) {
-        switch (eventName) {
-            case 'update':
-                // Handle update events if needed
-                break;
-            case 'entity:move':
-                // Check if movement is valid
-                if (data.entity && data.target) {
-                    const canMove = this.isPassable(data.target.x, data.target.y);
-                    if (!canMove) {
-                        // Block movement
-                        this.gameEngine.triggerEvent('movement:blocked', {
-                            entity: data.entity,
-                            reason: 'terrain_impassable'
-                        });
-                    }
-                }
-                break;
+    getTerrainAt(x, y) {
+        const gridX = Math.floor(x / this.gridSize) * this.gridSize;
+        const gridY = Math.floor(y / this.gridSize) * this.gridSize;
+        
+        if (this.grid[gridX] && this.grid[gridX][gridY]) {
+            return this.grid[gridX][gridY];
         }
+        return this.terrainTypes.grass; // Default
     }
 
-    // Optional: cleanup method
-    destroy() {
-        console.log('Terrain addon destroyed');
-        this.map = null;
+    render(ctx, camera) {
+        if (!this.grid.length) {
+            this.generateTerrain(1000, 1000);
+        }
+        
+        // Draw terrain tiles
+        for (const x in this.grid) {
+            for (const y in this.grid[x]) {
+                const tile = this.grid[x][y];
+                ctx.fillStyle = tile.color;
+                ctx.fillRect(
+                    tile.x - camera.x,
+                    tile.y - camera.y,
+                    this.gridSize,
+                    this.gridSize
+                );
+            }
+        }
     }
 }
+
+// Register this addon with the system
+AddonRegistry.register('TerrainSystem', 
+    (gameEngine) => {
+        console.log('🌄 Initializing TerrainSystem addon');
+        const terrainSystem = new TerrainSystem();
+        
+        // Attach to game engine
+        gameEngine.terrain = terrainSystem;
+        
+        // Store instance in registry
+        const addonData = AddonRegistry.getAddon('TerrainSystem');
+        if (addonData) {
+            addonData.instance = terrainSystem;
+        }
+        
+        // Generate initial terrain
+        terrainSystem.generateTerrain();
+        
+        console.log('✅ TerrainSystem ready');
+        return terrainSystem;
+    },
+    {
+        version: '1.0.0',
+        author: 'Game Dev',
+        gridSize: 50,
+        generation: {
+            grassRatio: 0.6,
+            forestRatio: 0.2,
+            mountainRatio: 0.15,
+            waterRatio: 0.05
+        }
+    }
+);
+
+export default TerrainSystem;
