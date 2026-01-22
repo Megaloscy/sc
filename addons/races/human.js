@@ -1,3 +1,8 @@
+import AddonRegistry from '../../addon-registry.js';
+
+
+
+
 export default class HumanRace {
     constructor(gameEngine) {
         this.gameEngine = gameEngine;
@@ -235,4 +240,5 @@ export default class HumanRace {
                 break;
         }
     }
+
 }
