@@ -1,5 +1,7 @@
-// addons/mechanics/resource.js
-import AddonRegistry from '../addon-registry.js';
+
+
+import AddonRegistry from '/sc/addons/addon-registry.js';
+
 
 class ResourceSystem {
     constructor() {
@@ -28,43 +30,23 @@ class ResourceSystem {
         }
         return false;
     }
-
-    // ... more resource management methods ...
 }
 
-// Register this addon with the system
+// 🔥 CRITICAL: This line REGISTERS the addon
 AddonRegistry.register('ResourceSystem', 
-    // Initialization function
     (gameEngine) => {
-        // Create instance
+        console.log('🚀 Initializing ResourceSystem addon');
         const resourceSystem = new ResourceSystem();
-        
-        // Attach to game engine for global access
         gameEngine.resources = resourceSystem;
-        
-        // Also store in addon registry for direct access
-        const addonData = AddonRegistry.getAddon('ResourceSystem');
-        if (addonData) {
-            addonData.instance = resourceSystem;
-        }
-        
-        // Example: Add default player
         resourceSystem.addPlayer('player1');
-        
-        console.log('ResourceSystem addon initialized');
+        console.log('✅ ResourceSystem ready');
+        return resourceSystem;
     },
-    // Optional configuration
     {
         version: '1.0.0',
-        author: 'Game Dev',
-        defaultResources: {
-            gold: 1000,
-            wood: 500,
-            stone: 200,
-            food: 100
-        }
+        author: 'Game Dev'
     }
 );
 
-// Optional: Keep the export for direct module usage
+// Optional: Keep export for direct usage
 export default ResourceSystem;

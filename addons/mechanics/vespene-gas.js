@@ -1,8 +1,5 @@
 import AddonRegistry from '../../addon-registry.js';
 
-
-
-
 export default class VespeneGas {
     constructor(gameEngine) {
         this.gameEngine = gameEngine;
@@ -243,5 +240,4 @@ export default class VespeneGas {
         console.log('VespeneGas system destroyed');
         this.geysers = [];
     }
-
 }

@@ -3,6 +3,7 @@ import AddonRegistry from '../../addon-registry.js';
 
 
 
+
 export default class Pathfinding {
     constructor(gameEngine) {
         this.gameEngine = gameEngine;
@@ -141,5 +142,4 @@ class PriorityQueue {
     contains(item) {
         return this.elements.some(e => e.item.x === item.x && e.item.y === item.y);
     }
-
 }

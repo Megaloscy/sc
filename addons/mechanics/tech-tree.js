@@ -1,8 +1,5 @@
 import AddonRegistry from '../../addon-registry.js';
 
-
-
-
 export default class TechTree {
     constructor(gameEngine) {
         this.gameEngine = gameEngine;
@@ -76,5 +73,4 @@ export default class TechTree {
     }
 
     // ... rest of the class methods ...
-
 }
