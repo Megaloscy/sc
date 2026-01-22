@@ -1,5 +1,5 @@
 import { GameEngine } from './main.js';
-import AddonRegistry from './addon-registry.js';
+import AddonRegistry from './addons/addon-registry.js';
 
 // Import addons - they auto-register with AddonRegistry
 import './addons/terrain/uneven-terrain.js';
@@ -46,7 +46,15 @@ class Game {
                 console.log('✅ Resource system active');
                 console.log('Player resources:', this.gameEngine.resources.getResource('player1', 'gold'));
             }
-            
+            // Test addon interaction
+if (this.gameEngine.resources && this.gameEngine.combat) {
+    console.log('⚔️ Resources + Combat systems integrated!');
+    // Example: Combat could consume resources
+}
+
+if (this.gameEngine.ai && this.entities.length > 0) {
+    console.log('🤖 AI can control entities');
+}
             if (this.gameEngine.combat) {
                 console.log('✅ Combat system active');
             }
@@ -460,3 +468,17 @@ document.addEventListener('DOMContentLoaded', () => {
     
     console.log('🎮 Modular RTS Game v1.0 Ready');
 });
+
+// Simpler test that doesn't need window.game
+setTimeout(() => {
+    const game = document.querySelector('#gameCanvas')?.gameInstance || 
+                 window.game || window.gameInstance;
+    if (game) {
+        console.log('✅ Found game:', game);
+    } else {
+        console.log('❌ Game not in window. Checking AddonRegistry...');
+        if (typeof AddonRegistry !== 'undefined') {
+            console.log('Addons:', AddonRegistry.listAddons());
+        }
+    }
+}, 2000);

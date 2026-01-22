@@ -1,3 +1,7 @@
+
+import AddonRegistry from './addons/addon-registry.js';
+
+
 // Export as ES6 module
 export class GameEngine {
     constructor() {
@@ -10,6 +14,10 @@ export class GameEngine {
         this.lastUpdateTime = 0;
         
         console.log('🎮 GameEngine created');
+		    // Initialize all registered addons
+    AddonRegistry.initAll(this);
+    
+    console.log('GameEngine started with modular addon system');
     }
 
     async init(canvasId = 'gameCanvas') {
@@ -245,5 +253,17 @@ export class Entity {
         // To be overridden by specific entity types
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(this.x - 5, this.y - 5, 10, 10);
+    }
+	
+	
+	
+	    /**
+     * Public method to access addon functionality
+     * @param {string} addonName - Name of the addon
+     * @returns {Object|null} Addon instance or null
+     */
+    getAddon(addonName) {
+        const addonData = AddonRegistry.getAddon(addonName);
+        return addonData ? addonData.instance : null;
     }
 }
