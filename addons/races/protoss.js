@@ -1,3 +1,8 @@
+import AddonRegistry from '../../addon-registry.js';
+
+
+
+
 export default class ProtossRace {
     constructor(gameEngine) {
         this.gameEngine = gameEngine;
@@ -289,4 +294,5 @@ export default class ProtossRace {
             ...data
         }));
     }
+
 }
