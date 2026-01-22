@@ -1,3 +1,8 @@
+import AddonRegistry from '../../addon-registry.js';
+
+
+
+
 export default class FogOfWar {
     constructor(gameEngine) {
         this.gameEngine = gameEngine;
@@ -76,4 +81,5 @@ export default class FogOfWar {
         if (!fogGrid || !fogGrid[y] || !fogGrid[y][x]) return false;
         return fogGrid[y][x] === 0;
     }
+
 }
