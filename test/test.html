@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RTS Game Test</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        .test { margin: 10px 0; padding: 10px; border-radius: 5px; }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    </style>
+</head>
+<body>
+    <h1>RTS Game System Test</h1>
+    <div id="results"></div>
+    
+    <script type="module">
+        const resultsDiv = document.getElementById('results');
+        
+        async function testModule(path, name) {
+            const testDiv = document.createElement('div');
+            testDiv.className = 'test info';
+            testDiv.innerHTML = `Testing ${name}...`;
+            resultsDiv.appendChild(testDiv);
+            
+            try {
+                const module = await import(path);
+                testDiv.className = 'test success';
+                testDiv.innerHTML = `✅ ${name}: Loaded successfully`;
+                console.log(`✅ ${name}:`, module);
+                return true;
+            } catch (error) {
+                testDiv.className = 'test error';
+                testDiv.innerHTML = `❌ ${name}: ${error.message}`;
+                console.error(`❌ ${name}:`, error);
+                return false;
+            }
+        }
+        
+        async function runAllTests() {
+            const tests = [
+                ['/sc/main.js', 'Game Engine'],
+                ['/sc/addons/addon-loader.js', 'Addon Loader'],
+                ['/sc/addons/terrain/uneven-terrain.js', 'Terrain System'],
+                ['/sc/addons/mechanics/resource.js', 'Resource System'],
+                ['/sc/addons/mechanics/combat.js', 'Combat System'],
+                ['/sc/addons/ai/basicAI.js', 'AI System']
+            ];
+            
+            let successCount = 0;
+            for (const [path, name] of tests) {
+                const success = await testModule(path, name);
+                if (success) successCount++;
+            }
+            
+            // Summary
+            const summary = document.createElement('div');
+            summary.className = successCount === tests.length ? 'test success' : 'test error';
+            summary.innerHTML = `<strong>Summary:</strong> ${successCount}/${tests.length} modules loaded successfully`;
+            resultsDiv.appendChild(summary);
+            
+            // Start game if all tests pass
+            if (successCount === tests.length) {
+                const startButton = document.createElement('button');
+                startButton.innerHTML = '🎮 Start Game';
+                startButton.style.cssText = `
+                    margin: 20px 0;
+                    padding: 15px 30px;
+                    font-size: 18px;
+                    background: #28a745;
+                    color: white;
+                    border: none;
+                    border-radius: 5px;
+                    cursor: pointer;
+                `;
+                startButton.onclick = () => {
+                    window.location.href = '/sc/';
+                };
+                resultsDiv.appendChild(startButton);
+            }
+        }
+        
+        runAllTests();
+    </script>
+</body>
+</html>

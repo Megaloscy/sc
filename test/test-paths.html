@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Import Paths</title>
+</head>
+<body>
+    <h1>Path Testing Tool</h1>
+    <div id="results"></div>
+    
+    <script type="module">
+        const testPaths = [
+            './addons/terrain/uneven-terrain.js',
+            'addons/terrain/uneven-terrain.js',
+            '/sc/addons/terrain/uneven-terrain.js',
+            'terrain/uneven-terrain.js',
+            './terrain/uneven-terrain.js'
+        ];
+        
+        async function testPath(path) {
+            try {
+                const module = await import(path);
+                console.log('Module loaded:', module);
+                return { 
+                    success: true, 
+                    path, 
+                    hasDefault: !!module.default,
+                    exports: Object.keys(module)
+                };
+            } catch (error) {
+                return { 
+                    success: false, 
+                    path, 
+                    error: error.toString() 
+                };
+            }
+        }
+        
+        async function runTests() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<h2>Testing Import Paths:</h2>';
+            
+            for (const path of testPaths) {
+                const result = await testPath(path);
+                const color = result.success ? 'green' : 'red';
+                const icon = result.success ? '✓' : '✗';
+                
+                let details = '';
+                if (result.success) {
+                    details = `<br>Has default export: ${result.hasDefault}`;
+                    details += `<br>Exports: ${result.exports.join(', ')}`;
+                } else {
+                    details = `<br>Error: ${result.error}`;
+                }
+                
+                resultsDiv.innerHTML += `
+                    <div style="color: ${color}; margin: 10px 0; padding: 10px; border: 1px solid ${color}; border-radius: 4px;">
+                        <strong>${icon} ${path}</strong>
+                        ${details}
+                    </div>
+                `;
+            }
+        }
+        
+        runTests();
+    </script>
+</body>
+</html>

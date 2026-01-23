@@ -1,0 +1,446 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galactic Conquest - Multiplayer RTS</title>
+    <style>
+        /* All CSS from previous version remains the same */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #0a0a1a;
+            color: #fff;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: #001122;
+            cursor: crosshair;
+        }
+
+        #uiOverlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        #minimap {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            width: 200px;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid #00ffff;
+            border-radius: 4px;
+            pointer-events: all;
+            cursor: pointer;
+        }
+
+        #resourcesPanel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 20px;
+            border: 2px solid #ffaa00;
+            border-radius: 5px;
+            display: flex;
+            gap: 20px;
+            pointer-events: all;
+        }
+
+        .resource {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        #selectionPanel {
+            position: absolute;
+            bottom: 220px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 15px;
+            border: 2px solid #00ff00;
+            border-radius: 5px;
+            min-width: 320px;
+            min-height: 120px;
+            pointer-events: all;
+            backdrop-filter: blur(5px);
+            z-index: 100;
+        }
+
+        #buildPanel {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .buildButton {
+            width: 70px;
+            height: 70px;
+            background: rgba(50, 50, 80, 0.7);
+            border: 2px solid #666;
+            border-radius: 5px;
+            cursor: pointer;
+            color: white;
+            font-size: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            padding: 5px;
+            text-align: center;
+        }
+
+        .buildButton:hover {
+            background: rgba(80, 80, 120, 0.9);
+            border-color: #00ff00;
+            transform: scale(1.05);
+        }
+
+        .buildButton:active {
+            transform: scale(0.95);
+        }
+
+        #unitCommands {
+            margin-top: 15px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .commandButton {
+            padding: 8px 12px;
+            background: linear-gradient(135deg, #0066cc, #004499);
+            border: 1px solid #00aaff;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: bold;
+            transition: all 0.2s;
+            pointer-events: all;
+        }
+
+        .commandButton:hover {
+            background: linear-gradient(135deg, #0088ff, #0066cc);
+            border-color: #00ffff;
+            transform: translateY(-2px);
+            box-shadow: 0 3px 10px rgba(0, 150, 255, 0.3);
+        }
+
+        .commandButton:active {
+            transform: translateY(0);
+        }
+
+        #gameInfo {
+            position: absolute;
+            top: 10px;
+            right: 220px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 10px 15px;
+            border: 2px solid #ff00ff;
+            border-radius: 5px;
+            font-size: 14px;
+            backdrop-filter: blur(3px);
+        }
+
+        .healthBar {
+            height: 4px;
+            background: #ff0000;
+            position: absolute;
+            top: -8px;
+            left: 0;
+            width: 100%;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .healthBarFill {
+            height: 100%;
+            background: linear-gradient(90deg, #00ff00, #00cc00);
+            transition: width 0.3s;
+        }
+
+        #selectedInfo {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #00ff00;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+        }
+
+        #debugInfo {
+            position: absolute;
+            top: 60px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            color: #00ff00;
+            
+            pointer-events: all;
+            z-index: 1000;
+        }
+
+        #cameraControls {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 10px;
+            pointer-events: all;
+        }
+
+        .cameraButton {
+            padding: 8px 15px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 1px solid #666;
+            border-radius: 4px;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .cameraButton:hover {
+            background: rgba(50, 50, 50, 0.9);
+            border-color: #00ffff;
+        }
+        
+        #versionInfo {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 5px 10px;
+            border-radius: 3px;
+            font-size: 10px;
+            color: #888;
+        }
+		
+        /* Draggable Panel Styles */
+        .ui-panel {
+            position: absolute;
+            pointer-events: all;
+            transition: box-shadow 0.2s;
+        }
+        
+        .ui-panel:hover {
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+        
+        .panel-header {
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.9);
+            border-bottom: 1px solid #444;
+            cursor: move;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .panel-title {
+            font-weight: bold;
+            color: #00ff00;
+        }
+        
+        .panel-close {
+            background: none;
+            border: none;
+            color: #ff4444;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0 5px;
+        }
+        
+        .panel-content {
+            padding: 10px;
+        }
+        
+        .drag-handle {
+            width: 100%;
+            height: 20px;
+            cursor: move;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            font-size: 12px;
+        }
+        
+        .drag-handle:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .resize-handle {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background: #666;
+            cursor: nwse-resize;
+            right: 0;
+            bottom: 0;
+            border-radius: 2px;
+        }
+        
+        .resize-handle:hover {
+            background: #00ffff;
+        }
+		
+        /* Panel button styles */
+        .ui-panel button {
+            padding: 5px 10px;
+            background: rgba(50, 50, 80, 0.7);
+            border: 1px solid #666;
+            border-radius: 3px;
+            color: white;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .ui-panel button:hover {
+            background: rgba(80, 80, 120, 0.9);
+            border-color: #00ff00;
+        }
+        
+        .ui-panel button:active {
+            transform: translateY(1px);
+        }
+        
+        /* Scrollable panels */
+        .scrollable-content {
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        
+        .scrollable-content::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .scrollable-content::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+        
+        .scrollable-content::-webkit-scrollbar-thumb {
+            background: rgba(100, 100, 150, 0.6);
+            border-radius: 4px;
+        }
+        
+        .scrollable-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(120, 120, 180, 0.8);
+        }
+		
+        /* Building drag preview */
+        #building-preview {
+            pointer-events: none !important;
+        }
+        
+        /* Construction effects */
+        .construction-particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #ffff00;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: particleFloat 1s ease-out forwards;
+        }
+        
+        @keyframes particleFloat {
+            0% {
+                transform: translate(0, 0);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--tx, 0), var(--ty, -20px));
+                opacity: 0;
+            }
+        }
+        
+        /* Production queue */
+        .production-queue-item {
+            display: flex;
+            align-items: center;
+            padding: 5px;
+            margin: 2px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+        
+        .production-queue-item.current {
+            background: rgba(0, 255, 255, 0.1);
+        }
+
+        /* Keep all existing CSS */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #0a0a1a; color: #fff; font-family: 'Arial', sans-serif; overflow: hidden; }
+        #gameContainer { position: relative; width: 100vw; height: 100vh; }
+        #gameCanvas { display: block; background: #001122; cursor: crosshair; }
+        /* ... keep all other CSS ... */
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas"></canvas>
+        <div id="uiOverlay">
+            <!-- Keep UI elements but simplify -->
+            <div id="resourcesPanel" style="position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 10px; color: white;">
+                Resources: <span id="energy">1000</span>
+            </div>
+            <div id="selectionPanel" style="position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.8); padding: 10px; color: white;">
+                Selection: <span id="selectedInfo">None</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- TEST: Load a single file that handles everything -->
+    <script type="module" src="js/game-bootstrap.js"></script>
+    
+    <!-- Debug overlay -->
+    <div id="debugOverlay" style="position: fixed; top: 50px; left: 10px; background: rgba(0,0,0,0.8); color: #0f0; padding: 10px; z-index: 10000; font-family: monospace;">
+        Game Status: <span id="debugStatus">Loading...</span>
+    </div>
+    
+    <script>
+    // Update debug overlay
+    setInterval(() => {
+        if (window.game) {
+            const status = document.getElementById('debugStatus');
+            status.innerHTML = `Running | Units: ${window.game.units?.size || 0} | State: ${window.game.gameState || 'unknown'}`;
+        }
+    }, 1000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!-- Create test.html with this content -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>RTS Command Test</title>
+    <style>
+        body { margin: 0; padding: 0; background: #001122; }
+        canvas { display: block; }
+        #ui { position: fixed; top: 10px; left: 10px; color: white; }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui">
+        <button onclick="testMove()">Test Move</button>
+        <button onclick="testGather()">Test Gather</button>
+        <div id="status">Status: Ready</div>
+    </div>
+    
+    <script>
+    // Simple unit class
+    class Unit {
+        constructor(id, x, y) {
+            this.id = id;
+            this.position = { x, y };
+            this.targetPosition = { x, y };
+            this.velocity = { x: 0, y: 0 };
+            this.speed = 50;
+            this.state = 'idle';
+            this.radius = 10;
+            this.color = '#00ff00';
+        }
+        
+        moveTo(x, y) {
+            console.log(`Unit moving to ${x}, ${y}`);
+            this.targetPosition = { x, y };
+            this.state = 'moving';
+        }
+        
+        update(deltaTime) {
+            if (this.state === 'moving') {
+                const dx = this.targetPosition.x - this.position.x;
+                const dy = this.targetPosition.y - this.position.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance < 5) {
+                    this.state = 'idle';
+                    this.velocity = { x: 0, y: 0 };
+                    console.log("Unit reached destination");
+                } else {
+                    this.velocity.x = (dx / distance) * this.speed;
+                    this.velocity.y = (dy / distance) * this.speed;
+                    
+                    this.position.x += this.velocity.x * deltaTime;
+                    this.position.y += this.velocity.y * deltaTime;
+                }
+            }
+        }
+        
+        render(ctx) {
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            ctx.arc(this.position.x, this.position.y, this.radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw direction
+            if (this.state === 'moving') {
+                ctx.strokeStyle = '#ffff00';
+                ctx.beginPath();
+                ctx.moveTo(this.position.x, this.position.y);
+                ctx.lineTo(this.targetPosition.x, this.targetPosition.y);
+                ctx.stroke();
+            }
+        }
+    }
+    
+    // Simple game
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    
+    const unit = new Unit('test', 100, 100);
+    let lastTime = 0;
+    
+    function gameLoop(currentTime) {
+        const deltaTime = (currentTime - lastTime) / 1000 || 0;
+        lastTime = currentTime;
+        
+        // Clear
+        ctx.fillStyle = '#001122';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Update
+        unit.update(deltaTime);
+        
+        // Render
+        unit.render(ctx);
+        
+        // Update status
+        document.getElementById('status').innerHTML = 
+            `State: ${unit.state}<br>Pos: ${unit.position.x.toFixed(1)}, ${unit.position.y.toFixed(1)}`;
+        
+        requestAnimationFrame(gameLoop);
+    }
+    
+    // Start game
+    gameLoop();
+    
+    // Test functions
+    window.testMove = function() {
+        unit.moveTo(unit.position.x + 100, unit.position.y + 50);
+    };
+    
+    window.testGather = function() {
+        unit.moveTo(300, 300);
+    };
+    </script>
+</body>
+</html>
