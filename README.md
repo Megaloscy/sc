@@ -223,10 +223,10 @@ Current working directory structure:
 │           uneven-terrain.js
 │           
 │       
-└───test
-        index.php
-        test-paths.html
-        test.html
-        test.js
+├───include
+│       EventSystem.js
+│       gameState.js
+│       init.js
+│       Unit.js
         
 
