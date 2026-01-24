@@ -44,6 +44,12 @@ class EventSystem {
   clearAll() {
     this.listeners.clear();
   }
+  
+  
+  
+  
+  
+  
 }
 
 export default EventSystem;
