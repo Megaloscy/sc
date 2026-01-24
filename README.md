@@ -130,58 +130,16 @@ Addon communication protocols
 
 Dependency validation
 
-🏗️ Architecture Needed:
-Production Addon (New):
-
-text
-Addons/Production/
-├── production.js
-├── building-templates.js
-└── production-ui.js
-Building Addon Enhancement:
-
-More building types
-
-Building upgrades
-
-Tech tree dependencies
-
-UI System Enhancement:
-
-Build queue display
-
-Production progress bars
-
-Command card/panel
-
-📋 To Continue in New AI Chat:
-Provide this summary:
-"We have a modular RTS with: EventSystem, Unit class with movement/combat/gathering/building, Resource system (minerals/vespene), Building construction, Combat system, Basic UI. Need to implement: 1) Unit production from buildings, 2) Production UI, 3) Addon dependencies, 4) Enhanced AI, 5) Building placement system."
-
-Priority Order:
-
-Unit Production System (most critical)
-
-Production UI
-
-Building Placement enhancements
-
-Addon dependency management
-
-AI improvements
-
-Current Status: all core systems working. Ready to implement production system where buildings can create units with resource costs.
-
-The foundation is solid - you have workers gathering both resources, building construction, combat, and a good event-driven architecture. The next major milestone is getting buildings to produce units!
-
-
 
 Current working directory structure:
+sc
 │   .htaccess
 │   1addon-registry.js
 │   index.html
 │   index.js
 │   index.php
+│   index_v1.js
+│   InputHandler.js
 │   main.js
 │   main1.js
 │   structure.txt
@@ -222,11 +180,45 @@ Current working directory structure:
 │   └───terrain
 │           uneven-terrain.js
 │           
-│       
 ├───include
+│       building-mode.js
+│       drawing.js
+│       effects.js
+│       event-handler.js
 │       EventSystem.js
+│       game-loop.js
 │       gameState.js
 │       init.js
+│       input.js
+│       renderer.js
+│       resource-handler.js
+│       selection.js
+│       ui.js
 │       Unit.js
+│       
+├───New folder
+│   │   index.html
+│   │   test.html
+│   │   
+│   └───js
+│       │   game-bootstrap.js
+│       │   main.js
+│       │   
+│       ├───core
+│       │       GameConstants.js
+│       │       GameEngine.js
+│       │       
+│       ├───entities
+│       │       Building.js
+│       │       Projectile.js
+│       │       Unit.js
+│       │       
+│       └───systems
+│               AISystem.js
+│               CollisionSystem.js
+│               DraggableUISystem.js
+│               InputSystem.js
+│               RenderSystem.js
+│               UISystem.js
         
 
